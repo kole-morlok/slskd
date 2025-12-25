@@ -40,7 +40,6 @@ namespace slskd
     using Microsoft.AspNetCore.Diagnostics;
     using Microsoft.AspNetCore.Hosting;
     using Microsoft.AspNetCore.Http;
-    using Microsoft.AspNetCore.Server.Kestrel.Core;
     using Microsoft.EntityFrameworkCore;
     using Microsoft.Extensions.Configuration;
     using Microsoft.Extensions.DependencyInjection;
@@ -242,7 +241,7 @@ namespace slskd
         private static IConfigurationRoot Configuration { get; set; }
         private static OptionsAtStartup OptionsAtStartup { get; } = new OptionsAtStartup();
         private static ILogger Log { get; set; } = new ConsoleWriteLineLogger();
-        private static Mutex Mutex { get; set; }
+        private static Mutex Mutex { get; } = new Mutex(initiallyOwned: true, Compute.Sha256Hash(AppName));
         private static IDisposable DotNetRuntimeStats { get; set; }
 
         [Argument('g', "generate-cert", "generate X509 certificate and password for HTTPs")]
@@ -340,29 +339,9 @@ namespace slskd
 
             // the application isn't being run in command mode. check the mutex to ensure
             // only one long-running instance.
-            try
+            if (!Mutex.WaitOne(millisecondsTimeout: 0, exitContext: false))
             {
-                Mutex = new Mutex(initiallyOwned: true, Compute.Sha256Hash(AppName), out bool created);
-
-                if (!created)
-                {
-                    Log.Fatal($"An instance of {AppName} is already running");
-                    return;
-                }
-            }
-            catch (IOException ex)
-            {
-                Log.Fatal($"I/O exception attempting to acquire the application singleton mutex; this can happen when running in a restricted environment (such as a read-only filesystem or container). Exception: {ex.Message}");
-                return;
-            }
-            catch (UnauthorizedAccessException ex)
-            {
-                Log.Fatal($"Unauthorized access attempting to acquire the application singleton mutex; this can happen when running with insuffucent permissions. Exception: {ex.Message}");
-                return;
-            }
-            catch (Exception ex)
-            {
-                Log.Fatal($"Failed to acquire the application singleton mutex: {ex.Message}");
+                Log.Fatal($"An instance of {AppName} is already running");
                 return;
             }
 
@@ -499,39 +478,19 @@ namespace slskd
                     .UseUrls()
                     .UseKestrel(options =>
                     {
-                        // configure HTTP, either by listening at any IP or by each of the IPs provided in the
-                        // config (note: they've already been validated at this point!)
-                        if (string.IsNullOrWhiteSpace(OptionsAtStartup.Web.IpAddress))
-                        {
-                            Log.Information("Listening for HTTP requests at http://{IP}:{Port}/", IPAddress.IPv6Any, OptionsAtStartup.Web.Port);
-                            options.Listen(IPAddress.IPv6Any, OptionsAtStartup.Web.Port); // [::]; any IPv4 or IPv6 address
-                        }
-                        else
-                        {
-                            var httpIps = OptionsAtStartup.Web.IpAddress
-                                .Split(',')
-                                .Select(ip => ip.Trim())
-                                .Select(ip => IPAddress.Parse(ip));
+                        Log.Information($"Listening for HTTP requests at http://{IPAddress.Any}:{OptionsAtStartup.Web.Port}/");
+                        options.Listen(IPAddress.Any, OptionsAtStartup.Web.Port);
 
-                            foreach (var ip in httpIps)
-                            {
-                                Log.Information("Listening for HTTP requests at http://{IP}:{Port}/", ip, OptionsAtStartup.Web.Port);
-                                options.Listen(ip, OptionsAtStartup.Web.Port);
-                            }
-                        }
-
-                        // configure UDS, if supplied
                         if (OptionsAtStartup.Web.Socket != null)
                         {
                             Log.Information($"Listening for HTTP requests on unix domain socket (UDS) {OptionsAtStartup.Web.Socket}");
                             options.ListenUnixSocket(OptionsAtStartup.Web.Socket);
                         }
 
-                        // configure HTTPS, again listening on any IP or on a list of supplied IPs
-                        // use a local function because Microsoft can't get enough of the obtuse builder pattern
-                        static void ListenHttps(KestrelServerOptions o, IPAddress ip)
+                        if (!OptionsAtStartup.Web.Https.Disabled)
                         {
-                            o.Listen(ip, OptionsAtStartup.Web.Https.Port, listenOptions =>
+                            Log.Information($"Listening for HTTPS requests at https://{IPAddress.Any}:{OptionsAtStartup.Web.Https.Port}/");
+                            options.Listen(IPAddress.Any, OptionsAtStartup.Web.Https.Port, listenOptions =>
                             {
                                 var cert = OptionsAtStartup.Web.Https.Certificate;
 
@@ -546,28 +505,6 @@ namespace slskd
                                     listenOptions.UseHttps(X509.Generate(subject: AppName));
                                 }
                             });
-                        }
-
-                        if (!OptionsAtStartup.Web.Https.Disabled)
-                        {
-                            if (string.IsNullOrWhiteSpace(OptionsAtStartup.Web.Https.IpAddress))
-                            {
-                                Log.Information("Listening for HTTPS requests at https://{IP}:{Port}/", IPAddress.IPv6Any, OptionsAtStartup.Web.Https.Port);
-                                ListenHttps(options, IPAddress.IPv6Any);
-                            }
-                            else
-                            {
-                                var httpsIps = OptionsAtStartup.Web.Https.IpAddress
-                                    .Split(',')
-                                    .Select(ip => ip.Trim())
-                                    .Select(ip => IPAddress.Parse(ip));
-
-                                foreach (var ip in httpsIps)
-                                {
-                                    Log.Information("Listening for HTTPS requests at https://{IP}:{Port}/", ip, OptionsAtStartup.Web.Https.Port);
-                                    ListenHttps(options, ip);
-                                }
-                            }
                         }
                     });
 
@@ -607,15 +544,6 @@ namespace slskd
             }
             finally
             {
-                try
-                {
-                    Mutex?.Dispose();
-                }
-                catch (Exception)
-                {
-                    // Ignore disposal errors to prevent masking other exceptions
-                }
-
                 Serilog.Log.CloseAndFlush();
             }
         }
@@ -797,7 +725,7 @@ namespace slskd
             var jwtSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(OptionsAtStartup.Web.Authentication.Jwt.Key));
 
             services.AddSingleton(jwtSigningKey);
-            services.AddSingleton<SecurityService>();
+            services.AddSingleton<ISecurityService, SecurityService>();
 
             if (!OptionsAtStartup.Web.Authentication.Disabled)
             {
@@ -864,7 +792,7 @@ namespace slskd
                                         try
                                         {
                                             // check to see if the provided value is a valid API key
-                                            var service = services.BuildServiceProvider().GetRequiredService<SecurityService>();
+                                            var service = services.BuildServiceProvider().GetRequiredService<ISecurityService>();
                                             var (name, role) = service.AuthenticateWithApiKey(token, callerIpAddress: context.HttpContext.Connection.RemoteIpAddress);
 
                                             // the API key is valid. create a new, short lived jwt for the key name and role

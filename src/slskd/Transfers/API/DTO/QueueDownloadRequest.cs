@@ -28,5 +28,10 @@ namespace slskd.Transfers.API
         ///     Gets or sets the size of the file.
         /// </summary>
         public long Size { get; set; }
+
+        /// <summary>
+        ///     Gets or sets the custom save path for the download.
+        /// </summary>
+        public string LocalPath { get; set; }
     }
 }

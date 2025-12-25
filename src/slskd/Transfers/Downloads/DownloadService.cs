@@ -29,6 +29,7 @@ namespace slskd.Transfers.Downloads
     using System.Threading;
     using System.Threading.Tasks;
     using Microsoft.EntityFrameworkCore;
+    using Microsoft.IdentityModel.Tokens;
     using Serilog;
     using slskd.Events;
     using slskd.Files;
@@ -61,7 +62,7 @@ namespace slskd.Transfers.Downloads
         /// <exception cref="ArgumentException">Thrown when the username is null or an empty string.</exception>
         /// <exception cref="ArgumentException">Thrown when no files are requested.</exception>
         /// <exception cref="AggregateException">Thrown when at least one of the requested files throws.</exception>
-        Task<(List<Transfer> Enqueued, List<string> Failed)> EnqueueAsync(string username, IEnumerable<(string Filename, long Size)> files, CancellationToken cancellationToken = default);
+        Task<(List<Transfer> Enqueued, List<string> Failed)> EnqueueAsync(string username, IEnumerable<(string Filename, long Size, string LocalPath)> files, CancellationToken cancellationToken = default);
 
         /// <summary>
         ///     Finds a single download matching the specified <paramref name="expression"/>.
@@ -230,7 +231,7 @@ namespace slskd.Transfers.Downloads
         /// <exception cref="ArgumentException">Thrown when the username is null or an empty string.</exception>
         /// <exception cref="ArgumentException">Thrown when no files are requested.</exception>
         /// <exception cref="AggregateException">Thrown when at least one of the requested files throws.</exception>
-        public async Task<(List<Transfer> Enqueued, List<string> Failed)> EnqueueAsync(string username, IEnumerable<(string Filename, long Size)> files, CancellationToken cancellationToken = default)
+        public async Task<(List<Transfer> Enqueued, List<string> Failed)> EnqueueAsync(string username, IEnumerable<(string Filename, long Size, string LocalPath)> files, CancellationToken cancellationToken = default)
         {
             if (string.IsNullOrEmpty(username))
             {
@@ -391,6 +392,7 @@ namespace slskd.Transfers.Downloads
                             Username = username,
                             Direction = TransferDirection.Download,
                             Filename = file.Filename, // important! use the remote filename
+                            LocalPath = file.LocalPath, // custom save path if provided
                             Size = file.Size,
                             StartOffset = 0, // todo: maybe implement resumeable downloads?
                             RequestedAt = DateTime.UtcNow,
@@ -399,7 +401,14 @@ namespace slskd.Transfers.Downloads
 
                         context.Add(transfer);
 
-                        Log.Debug("Added Transfer record for download of {Filename} from {Username} (id: {Id})", transfer.Filename, transfer.Username, transfer.Id);
+                        if (transfer.LocalPath.IsNullOrEmpty())
+                        {
+                            Log.Debug("Added Transfer record for download of {Filename} from {Username} (id: {Id})", transfer.Filename, transfer.Username, transfer.Id);
+                        }
+                        else
+                        {
+                            Log.Debug("Added Transfer record for download of {Filename} from {Username} to {LocalPath} (id: {Id})", transfer.Filename, transfer.Username, transfer.LocalPath, transfer.Id);
+                        }
 
                         foreach (var record in existingRecords.Where(t => t.Filename == file.Filename && !t.Removed))
                         {
@@ -970,7 +979,7 @@ namespace slskd.Transfers.Downloads
                     remoteFilename: transfer.Filename,
                     outputStreamFactory: () => Task.FromResult(
                         Files.CreateFile(
-                            filename: transfer.Filename.ToLocalFilename(baseDirectory: OptionsMonitor.CurrentValue.Directories.Incomplete),
+                            filename: transfer.GetLocalFilename(baseDirectory: OptionsMonitor.CurrentValue.Directories.Incomplete),
                             options: new CreateFileOptions
                             {
                                 Access = System.IO.FileAccess.Write,
@@ -1000,10 +1009,10 @@ namespace slskd.Transfers.Downloads
                 Log.Debug("Successfully updated Transfer for {Filename} from {Username} (state: {State}, progress: {Progress})", transfer.Filename, transfer.Username, transfer.State, transfer.PercentComplete);
 
                 // move the file from incomplete to complete
-                var destinationDirectory = System.IO.Path.GetDirectoryName(transfer.Filename.ToLocalFilename(baseDirectory: OptionsMonitor.CurrentValue.Directories.Downloads));
+                var destinationDirectory = System.IO.Path.GetDirectoryName(transfer.GetLocalFilename(baseDirectory: OptionsMonitor.CurrentValue.Directories.Downloads));
 
                 var finalFilename = Files.MoveFile(
-                    sourceFilename: transfer.Filename.ToLocalFilename(baseDirectory: OptionsMonitor.CurrentValue.Directories.Incomplete),
+                    sourceFilename: transfer.GetLocalFilename(baseDirectory: OptionsMonitor.CurrentValue.Directories.Incomplete),
                     destinationDirectory: destinationDirectory,
                     unixFileMode: unixFileMode,
                     overwrite: false,

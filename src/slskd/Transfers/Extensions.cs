@@ -27,6 +27,7 @@ namespace slskd.Transfers
                 Username = transfer.Username,
                 Direction = transfer.Direction,
                 Filename = transfer.Filename,
+                LocalPath = transfer.LocalPath,
                 Size = transfer.Size,
                 StartOffset = t.StartOffset,
                 State = t.State,

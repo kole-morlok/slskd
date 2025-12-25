@@ -15,7 +15,6 @@
 //     along with this program.  If not, see https://www.gnu.org/licenses/.
 // </copyright>
 
-using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 
 namespace slskd.Authentication
@@ -25,7 +24,7 @@ namespace slskd.Authentication
     using System.Text.Encodings.Web;
     using System.Threading.Tasks;
     using Microsoft.AspNetCore.Authentication;
-    using Serilog;
+    using Microsoft.Extensions.Logging;
 
     /// <summary>
     ///     API key authentication.
@@ -52,7 +51,7 @@ namespace slskd.Authentication
         /// <param name="urlEncoder">A url encoder.</param>
         public ApiKeyAuthenticationHandler(
             IOptionsMonitor<ApiKeyAuthenticationOptions> apiKeyOptionsMonitor,
-            SecurityService securityService,
+            ISecurityService securityService,
             ILoggerFactory logger,
             UrlEncoder urlEncoder)
             : base(apiKeyOptionsMonitor, logger, urlEncoder)
@@ -60,8 +59,7 @@ namespace slskd.Authentication
             Security = securityService;
         }
 
-        private ILogger Log { get; } = Serilog.Log.ForContext<ApiKeyAuthenticationHandler>();
-        private SecurityService Security { get; }
+        private ISecurityService Security { get; }
 
         /// <summary>
         ///     Authenticates via API key.
@@ -88,7 +86,6 @@ namespace slskd.Authentication
             }
             catch (Exception ex)
             {
-                Log.Warning("Unauthorized request from IP address {IP}: {Message}", Request.HttpContext.Connection.RemoteIpAddress, ex.Message);
                 return AuthenticateResult.Fail(ex);
             }
         }

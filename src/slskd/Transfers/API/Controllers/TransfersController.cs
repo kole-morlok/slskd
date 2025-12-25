@@ -226,7 +226,7 @@ namespace slskd.Transfers.API
 
             try
             {
-                var (enqueued, failed) = await Transfers.Downloads.EnqueueAsync(username, requests.Select(r => (r.Filename, r.Size)), cancellationToken);
+                var (enqueued, failed) = await Transfers.Downloads.EnqueueAsync(username, requests.Select(r => (r.Filename, r.Size, r.LocalPath)), cancellationToken);
 
                 return StatusCode(201, new { Enqueued = enqueued, Failed = failed });
             }

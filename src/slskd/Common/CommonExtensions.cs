@@ -352,10 +352,11 @@ namespace slskd
         /// </summary>
         /// <param name="remoteFilename">The fully qualified remote filename to convert.</param>
         /// <param name="baseDirectory">The base directory for the local filename.</param>
+        /// <param name="maxParentDirs">The maximum number of parent directories to include in the relative path. Specify 0 to include all parent directories.</param>
         /// <returns>The converted filename.</returns>
-        public static string ToLocalFilename(this string remoteFilename, string baseDirectory)
+        public static string ToLocalFilename(this string remoteFilename, string baseDirectory, int maxParentDirs = 1)
         {
-            return Path.Combine(baseDirectory, remoteFilename.ToLocalRelativeFilename());
+            return Path.Combine(baseDirectory, remoteFilename.ToLocalRelativeFilename(maxParentDirs));
         }
 
         /// <summary>
@@ -407,8 +408,9 @@ namespace slskd
         ///     remote store (including the filename and the parent folder).
         /// </summary>
         /// <param name="remoteFilename">The fully qualified remote filename to convert.</param>
+        /// <param name="maxParentDirs">The maximum number of parent directories to include in the relative path. Specify 0 to include all parent directories.</param>
         /// <returns>The converted filename.</returns>
-        public static string ToLocalRelativeFilename(this string remoteFilename)
+        public static string ToLocalRelativeFilename(this string remoteFilename, int maxParentDirs = 1)
         {
             if (string.IsNullOrWhiteSpace(remoteFilename))
             {
@@ -418,17 +420,21 @@ namespace slskd
             // normalize path separators
             var localizedRemoteFilename = remoteFilename.LocalizePath();
 
-            var parts = localizedRemoteFilename.Split(Path.DirectorySeparatorChar);
+            // split into parts and sanitize each part
+            var parts = localizedRemoteFilename.Split(Path.DirectorySeparatorChar).Select(p => p.ReplaceInvalidFileNameCharacters()).ToArray();
 
+            // if there is only one part, return the filename only
             if (parts.Length == 1)
             {
-                return parts.First().ReplaceInvalidFileNameCharacters();
+                return parts[0];
             }
 
-            var file = parts.Last().ReplaceInvalidFileNameCharacters();
-            var directory = parts.Reverse().Skip(1).Take(1).Single().ReplaceInvalidFileNameCharacters();
+            // Take the filename and the specified number of parent directories
+            maxParentDirs = maxParentDirs == 0 ? parts.Length - 1 : Math.Min(maxParentDirs, parts.Length - 1);
 
-            return Path.Combine(directory, file);
+            var selectedParts = parts.Reverse().Take(maxParentDirs + 1).Reverse();
+
+            return Path.Combine(selectedParts.ToArray());
         }
 
         /// <summary>

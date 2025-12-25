@@ -21,6 +21,7 @@ namespace slskd.Transfers
     using System.ComponentModel.DataAnnotations;
     using System.ComponentModel.DataAnnotations.Schema;
     using System.Text.Json.Serialization;
+    using Microsoft.IdentityModel.Tokens;
     using Soulseek;
 
     public class Transfer
@@ -34,6 +35,12 @@ namespace slskd.Transfers
         ///     Gets the remote filename.
         /// </summary>
         public string Filename { get; init; }
+
+        /// <summary>
+        ///     Gets the custom local path for saving the file (optional).
+        /// </summary>
+        public string LocalPath { get; set; }
+
         public long Size { get; set; }
         public long StartOffset { get; init; }
 
@@ -76,5 +83,23 @@ namespace slskd.Transfers
         public double PercentComplete => Size == 0 ? 0 : (BytesTransferred / (double)Size) * 100;
         [NotMapped]
         public TimeSpan? RemainingTime => AverageSpeed == 0 ? null : TimeSpan.FromSeconds(BytesRemaining / AverageSpeed);
+
+        public string GetLocalFilename(string baseDirectory)
+        {
+            string local;
+
+            if (LocalPath.IsNullOrEmpty())
+            {
+                // Standard old behavior for transfers
+                local = Filename.ToLocalFilename(baseDirectory);
+            }
+            else
+            {
+                // New behavior: use full custom local path
+                local = LocalPath.ToLocalFilename(baseDirectory, 0);
+            }
+
+            return local;
+        }
     }
 }
