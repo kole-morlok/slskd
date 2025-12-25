@@ -17,6 +17,7 @@
 
 namespace slskd.Core.API
 {
+    using System.Collections.Generic;
     using Asp.Versioning;
     using Microsoft.AspNetCore.Authorization;
     using Microsoft.AspNetCore.Mvc;
@@ -35,8 +36,10 @@ namespace slskd.Core.API
         ///     Gets the last few application logs.
         /// </summary>
         /// <returns></returns>
+        /// <response code="200">The request completed successfully.</response>
         [HttpGet]
         [Authorize(Policy = AuthPolicy.Any)]
+        [ProducesResponseType(typeof(IEnumerable<LogRecord>), 200)]
         public IActionResult Logs()
         {
             return Ok(Program.LogBuffer);

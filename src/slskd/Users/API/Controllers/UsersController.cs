@@ -67,10 +67,11 @@ namespace slskd.Users.API
         /// <param name="username">The username of the user.</param>
         /// <returns></returns>
         /// <response code="200">The request completed successfully.</response>
+        /// <response code="404">The specified user could not be found or is offline.</response>
         [HttpGet("{username}/endpoint")]
         [Authorize(Policy = AuthPolicy.Any)]
         [ProducesResponseType(typeof(IPEndPoint), 200)]
-        [ProducesResponseType(404)]
+        [ProducesResponseType(typeof(string), 404)]
         public async Task<IActionResult> Endpoint([FromRoute, Required] string username)
         {
             if (Program.IsRelayAgent)
@@ -94,10 +95,12 @@ namespace slskd.Users.API
         /// </summary>
         /// <param name="username">The username of the user.</param>
         /// <returns></returns>
+        /// <response code="200">The request completed successfully.</response>
+        /// <response code="404">The specified user could not be found or is offline.</response>
         [HttpGet("{username}/browse")]
         [Authorize(Policy = AuthPolicy.Any)]
-        [ProducesResponseType(typeof(IEnumerable<Directory>), 200)]
-        [ProducesResponseType(404)]
+        [ProducesResponseType(typeof(BrowseResponse), 200)]
+        [ProducesResponseType(typeof(string), 404)]
         public async Task<IActionResult> Browse([FromRoute, Required] string username)
         {
             if (Program.IsRelayAgent)
@@ -128,9 +131,11 @@ namespace slskd.Users.API
         /// </summary>
         /// <param name="username">The username of the user.</param>
         /// <returns></returns>
+        /// <response code="200">The request completed successfully.</response>
+        /// <response code="404">No browse operation is in progress for the specified user.</response>
         [HttpGet("{username}/browse/status")]
         [Authorize(Policy = AuthPolicy.Any)]
-        [ProducesResponseType(typeof(decimal), 200)]
+        [ProducesResponseType(typeof(BrowseProgressUpdatedEventArgs), 200)]
         [ProducesResponseType(404)]
         public IActionResult BrowseStatus([FromRoute, Required] string username)
         {
@@ -153,10 +158,14 @@ namespace slskd.Users.API
         /// <param name="username">The username of the user.</param>
         /// <param name="request">The directory contents request.</param>
         /// <returns></returns>
+        /// <response code="200">The request completed successfully.</response>
+        /// <response code="400">The request is invalid.</response>
+        /// <response code="404">The specified user could not be found or is offline.</response>
         [HttpPost("{username}/directory")]
         [Authorize(Policy = AuthPolicy.Any)]
         [ProducesResponseType(typeof(IEnumerable<Directory>), 200)]
-        [ProducesResponseType(404)]
+        [ProducesResponseType(400)]
+        [ProducesResponseType(typeof(string), 404)]
         public async Task<IActionResult> Directory([FromRoute, Required] string username, [FromBody, Required] DirectoryContentsRequest request)
         {
             if (Program.IsRelayAgent)
@@ -188,10 +197,12 @@ namespace slskd.Users.API
         /// </summary>
         /// <param name="username">The username of the user.</param>
         /// <returns></returns>
+        /// <response code="200">The request completed successfully.</response>
+        /// <response code="404">The specified user could not be found or is offline.</response>
         [HttpGet("{username}/info")]
         [Authorize(Policy = AuthPolicy.Any)]
         [ProducesResponseType(typeof(Info), 200)]
-        [ProducesResponseType(404)]
+        [ProducesResponseType(typeof(string), 404)]
         public async Task<IActionResult> Info([FromRoute, Required] string username)
         {
             if (Program.IsRelayAgent)
@@ -215,10 +226,12 @@ namespace slskd.Users.API
         /// </summary>
         /// <param name="username">The username of the user.</param>
         /// <returns></returns>
+        /// <response code="200">The request completed successfully.</response>
+        /// <response code="404">The specified user could not be found or is offline.</response>
         [HttpGet("{username}/status")]
         [Authorize(Policy = AuthPolicy.Any)]
         [ProducesResponseType(typeof(Status), 200)]
-        [ProducesResponseType(404)]
+        [ProducesResponseType(typeof(string), 404)]
         public async Task<IActionResult> Status([FromRoute, Required] string username)
         {
             if (Program.IsRelayAgent)

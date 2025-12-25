@@ -20,6 +20,7 @@ using Microsoft.Extensions.Options;
 namespace slskd.Search.API
 {
     using System;
+    using System.Collections.Generic;
     using System.Threading;
     using System.Threading.Tasks;
     using Asp.Versioning;
@@ -65,6 +66,9 @@ namespace slskd.Search.API
         /// <response code="500">The search terminated abnormally.</response>
         [HttpPost("")]
         [Authorize(Policy = AuthPolicy.Any)]
+        [ProducesResponseType(typeof(Search), 200)]
+        [ProducesResponseType(typeof(string), 400)]
+        [ProducesResponseType(typeof(string), 500)]
         public async Task<IActionResult> Post([FromBody] SearchRequest request)
         {
             if (Program.IsRelayAgent)
@@ -125,6 +129,8 @@ namespace slskd.Search.API
         /// <response code="404">A matching search was not found.</response>
         [HttpGet("{id}")]
         [Authorize(Policy = AuthPolicy.Any)]
+        [ProducesResponseType(typeof(Search), 200)]
+        [ProducesResponseType(404)]
         public async Task<IActionResult> GetById([FromRoute] Guid id, [FromQuery] bool includeResponses = false)
         {
             if (Program.IsRelayAgent)
@@ -151,6 +157,8 @@ namespace slskd.Search.API
         /// <response code="404">A matching search was not found.</response>
         [HttpGet("{id}/responses")]
         [Authorize(Policy = AuthPolicy.Any)]
+        [ProducesResponseType(typeof(IEnumerable<Response>), 200)]
+        [ProducesResponseType(404)]
         public async Task<IActionResult> GetResponsesById([FromRoute] Guid id)
         {
             if (Program.IsRelayAgent)
@@ -171,9 +179,11 @@ namespace slskd.Search.API
         /// <summary>
         ///     Gets the list of active and completed searches.
         /// </summary>
-        /// <returns></returns>
+        /// <returns>A list of all searches.</returns>
+        /// <response code="200">The request completed successfully.</response>
         [HttpGet("")]
         [Authorize(Policy = AuthPolicy.Any)]
+        [ProducesResponseType(typeof(IEnumerable<Search>), 200)]
         public async Task<IActionResult> GetAll()
         {
             if (Program.IsRelayAgent)
@@ -191,11 +201,13 @@ namespace slskd.Search.API
         /// <param name="id">The unique id of the search.</param>
         /// <response code="200">The search was stopped.</response>
         /// <response code="304">The search was not in progress.</response>
+        /// <response code="404">A matching search was not found.</response>
         /// <returns></returns>
         [HttpPut("{id}")]
         [Authorize(Policy = AuthPolicy.Any)]
         [ProducesResponseType(200)]
         [ProducesResponseType(304)]
+        [ProducesResponseType(404)]
         public async Task<IActionResult> Cancel([FromRoute] Guid id)
         {
             if (Program.IsRelayAgent)

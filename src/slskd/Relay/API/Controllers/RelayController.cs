@@ -71,8 +71,12 @@ namespace slskd.Relay
         ///     Connects to the configured controller.
         /// </summary>
         /// <returns></returns>
+        /// <response code="200">The request completed successfully.</response>
+        /// <response code="403">Relay is not configured in agent mode.</response>
         [HttpPut("agent")]
         [Authorize(Policy = AuthPolicy.JwtOnly, Roles = AuthRole.AdministratorOnly)]
+        [ProducesResponseType(200)]
+        [ProducesResponseType(403)]
         public async Task<IActionResult> Connect()
         {
             if (!OptionsAtStartup.Relay.Enabled || !new[] { RelayMode.Agent, RelayMode.Debug }.Contains(OperationMode))
@@ -88,8 +92,12 @@ namespace slskd.Relay
         ///     Disconnects from the connected controller.
         /// </summary>
         /// <returns></returns>
+        /// <response code="204">The request completed successfully.</response>
+        /// <response code="403">Relay is not configured in agent mode.</response>
         [HttpDelete("agent")]
         [Authorize(Policy = AuthPolicy.JwtOnly, Roles = AuthRole.AdministratorOnly)]
+        [ProducesResponseType(204)]
+        [ProducesResponseType(403)]
         public async Task<IActionResult> Disconnect()
         {
             if (!OptionsAtStartup.Relay.Enabled || !new[] { RelayMode.Agent, RelayMode.Debug }.Contains(OperationMode))
@@ -106,8 +114,16 @@ namespace slskd.Relay
         /// </summary>
         /// <param name="token">The unique identifier for the request.</param>
         /// <returns></returns>
+        /// <response code="200">The file download.</response>
+        /// <response code="400">The token is invalid.</response>
+        /// <response code="403">Relay is not configured in controller mode.</response>
+        /// <response code="404">The file could not be found.</response>
         [HttpGet("controller/downloads/{token}")]
         [Authorize(Policy = AuthPolicy.ApiKeyOnly, Roles = AuthRole.Any)]
+        [ProducesResponseType(typeof(FileResult), 200)]
+        [ProducesResponseType(typeof(string), 400)]
+        [ProducesResponseType(403)]
+        [ProducesResponseType(404)]
         public IActionResult DownloadFile([FromRoute] string token)
         {
             if (!OptionsAtStartup.Relay.Enabled || !new[] { RelayMode.Controller, RelayMode.Debug }.Contains(OperationMode))
@@ -157,11 +173,17 @@ namespace slskd.Relay
         /// </summary>
         /// <param name="token">The unique identifier for the request.</param>
         /// <returns></returns>
+        /// <response code="200">The file was uploaded successfully.</response>
+        /// <response code="400">The token is invalid or the request is malformed.</response>
+        /// <response code="403">Relay is not configured in agent mode.</response>
         [HttpPost("controller/files/{token}")]
         [RequestSizeLimit(10L * ONE_TEBIBYTE)]
         [RequestFormLimits(MultipartBodyLengthLimit = 10L * ONE_TEBIBYTE)]
         [DisableFormValueModelBinding]
         [Authorize(Policy = AuthPolicy.ApiKeyOnly, Roles = AuthRole.ReadWriteOrAdministrator)]
+        [ProducesResponseType(200)]
+        [ProducesResponseType(typeof(string), 400)]
+        [ProducesResponseType(403)]
         public async Task<IActionResult> UploadFile(string token)
         {
             if (!OptionsAtStartup.Relay.Enabled || !new[] { RelayMode.Controller, RelayMode.Debug }.Contains(OperationMode))
@@ -255,10 +277,16 @@ namespace slskd.Relay
         /// </summary>
         /// <param name="token">The unique identifier for the request.</param>
         /// <returns></returns>
+        /// <response code="200">The shares were uploaded successfully.</response>
+        /// <response code="400">The token is invalid or the request is malformed.</response>
+        /// <response code="403">Relay is not configured in agent mode.</response>
         [HttpPost("controller/shares/{token}")]
         [RequestSizeLimit(ONE_TEBIBYTE)]
         [RequestFormLimits(MultipartBodyLengthLimit = ONE_TEBIBYTE)]
         [Authorize(Policy = AuthPolicy.ApiKeyOnly, Roles = AuthRole.ReadWriteOrAdministrator)]
+        [ProducesResponseType(200)]
+        [ProducesResponseType(typeof(string), 400)]
+        [ProducesResponseType(403)]
         public async Task<IActionResult> UploadShares(string token)
         {
             if (!OptionsAtStartup.Relay.Enabled || !new[] { RelayMode.Controller, RelayMode.Debug }.Contains(OperationMode))

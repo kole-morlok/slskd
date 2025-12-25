@@ -202,6 +202,14 @@ namespace slskd.Messaging.API
             return Ok(conversation);
         }
 
+        /// <summary>
+        ///     Gets all messages for the conversation associated with the specified username.
+        /// </summary>
+        /// <param name="username">The username associated with the desired conversation.</param>
+        /// <param name="unAcknowledgedOnly">Return only unacknowledged messages.</param>
+        /// <returns></returns>
+        /// <response code="200">The request completed successfully.</response>
+        /// <response code="404">A conversation with the specified username could not be found.</response>
         [HttpGet("{username}/messages")]
         [Authorize(Policy = AuthPolicy.Any)]
         [ProducesResponseType(typeof(List<PrivateMessage>), 200)]

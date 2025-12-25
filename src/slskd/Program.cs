@@ -980,6 +980,10 @@ namespace slskd
                         },
                     });
 
+                    // use fully qualified names to avoid schema ID conflicts
+                    // replace '+' with '.' for nested types to make valid schema references
+                    options.CustomSchemaIds(type => type.FullName?.Replace('+', '.'));
+
                     // allow endpoints marked with multiple content types in [Produces] to generate properly
                     options.OperationFilter<ContentNegotiationOperationFilter>();
 
