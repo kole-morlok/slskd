@@ -60,8 +60,10 @@ namespace slskd.Core.API
         ///     Gets the current state of the application.
         /// </summary>
         /// <returns></returns>
+        /// <response code="200">The request completed successfully.</response>
         [HttpGet]
         [Authorize(Policy = AuthPolicy.Any)]
+        [ProducesResponseType(typeof(State), 200)]
         public IActionResult State()
         {
             return Ok(ApplicationStateMonitor.CurrentValue);
@@ -71,8 +73,10 @@ namespace slskd.Core.API
         ///     Stops the application.
         /// </summary>
         /// <returns></returns>
+        /// <response code="204">The request completed successfully.</response>
         [HttpDelete]
         [Authorize(Policy = AuthPolicy.JwtOnly, Roles = AuthRole.AdministratorOnly)]
+        [ProducesResponseType(204)]
         public IActionResult Shutdown()
         {
             Program.MasterCancellationTokenSource.Cancel();
@@ -91,8 +95,10 @@ namespace slskd.Core.API
         ///     Restarts the application.
         /// </summary>
         /// <returns></returns>
+        /// <response code="204">The request completed successfully.</response>
         [HttpPut]
         [Authorize(Policy = AuthPolicy.JwtOnly, Roles = AuthRole.AdministratorOnly)]
+        [ProducesResponseType(204)]
         public IActionResult Restart()
         {
             Program.MasterCancellationTokenSource.Cancel();
@@ -106,8 +112,10 @@ namespace slskd.Core.API
         ///     Gets the current application version.
         /// </summary>
         /// <returns></returns>
+        /// <response code="200">The request completed successfully.</response>
         [HttpGet("version")]
         [Authorize(Policy = AuthPolicy.Any)]
+        [ProducesResponseType(typeof(string), 200)]
         public IActionResult GetVersion()
         {
             return Ok(Program.SemanticVersion);
@@ -116,9 +124,12 @@ namespace slskd.Core.API
         /// <summary>
         ///     Checks for updates.
         /// </summary>
+        /// <param name="forceCheck"></param>
         /// <returns></returns>
+        /// <response code="200">The request completed successfully.</response>
         [HttpGet("version/latest")]
         [Authorize(Policy = AuthPolicy.Any)]
+        [ProducesResponseType(typeof(VersionState), 200)]
         public async Task<IActionResult> CheckVersion([FromQuery] bool forceCheck = false)
         {
             if (forceCheck)
@@ -133,8 +144,10 @@ namespace slskd.Core.API
         ///     Forces garbage collection.
         /// </summary>
         /// <returns></returns>
+        /// <response code="200">The request completed successfully.</response>
         [HttpPost("gc")]
         [Authorize(Policy = AuthPolicy.Any)]
+        [ProducesResponseType(200)]
         public IActionResult CollectGarbage()
         {
             Application.CollectGarbage();
@@ -142,8 +155,14 @@ namespace slskd.Core.API
             return Ok();
         }
 
+        /// <summary>
+        ///     Generates a memory dump for debugging purposes.
+        /// </summary>
+        /// <returns></returns>
+        /// <response code="200">The memory dump file.</response>
         [HttpGet("dump")]
         [Authorize(Policy = AuthPolicy.Any)]
+        [ProducesResponseType(typeof(FileResult), 200)]
         public async Task<IActionResult> DumpMemory()
         {
             using var dumper = new Dumper();
@@ -152,8 +171,15 @@ namespace slskd.Core.API
             return PhysicalFile(file, "application/octet-stream", "slskd.dmp");
         }
 
+        /// <summary>
+        ///     Loopback endpoint for testing.
+        /// </summary>
+        /// <param name="body"></param>
+        /// <returns></returns>
+        /// <response code="200">The request completed successfully.</response>
         [HttpPost("loopback")]
         [Authorize(Policy = AuthPolicy.Any)]
+        [ProducesResponseType(200)]
         public IActionResult Loopback([FromBody] object body)
         {
             Log.Information("Loopback POST: {Body}", body);

@@ -248,7 +248,7 @@ namespace slskd.Transfers.API
         /// <response code="200">The request completed successfully.</response>
         [HttpGet("downloads")]
         [Authorize(Policy = AuthPolicy.Any)]
-        [ProducesResponseType(200)]
+        [ProducesResponseType(typeof(IEnumerable<UserResponse>), 200)]
         public IActionResult GetDownloadsAsync([FromQuery] bool includeRemoved = false)
         {
             if (Program.IsRelayAgent)
@@ -280,7 +280,7 @@ namespace slskd.Transfers.API
         /// <response code="200">The request completed successfully.</response>
         [HttpGet("downloads/{username}")]
         [Authorize(Policy = AuthPolicy.Any)]
-        [ProducesResponseType(200)]
+        [ProducesResponseType(typeof(UserResponse), 200)]
         public IActionResult GetDownloadsAsync([FromRoute, Required] string username)
         {
             if (Program.IsRelayAgent)
@@ -382,7 +382,7 @@ namespace slskd.Transfers.API
         /// <response code="200">The request completed successfully.</response>
         [HttpGet("uploads")]
         [Authorize(Policy = AuthPolicy.Any)]
-        [ProducesResponseType(200)]
+        [ProducesResponseType(typeof(IEnumerable<UserResponse>), 200)]
         public IActionResult GetUploads([FromQuery] bool includeRemoved = false)
         {
             if (Program.IsRelayAgent)
@@ -416,7 +416,7 @@ namespace slskd.Transfers.API
         /// <response code="200">The request completed successfully.</response>
         [HttpGet("uploads/{username}")]
         [Authorize(Policy = AuthPolicy.Any)]
-        [ProducesResponseType(200)]
+        [ProducesResponseType(typeof(UserResponse), 200)]
         public IActionResult GetUploads([FromRoute, Required] string username)
         {
             if (Program.IsRelayAgent)
@@ -454,7 +454,7 @@ namespace slskd.Transfers.API
         /// <response code="200">The request completed successfully.</response>
         [HttpGet("uploads/{username}/{id}")]
         [Authorize(Policy = AuthPolicy.Any)]
-        [ProducesResponseType(200)]
+        [ProducesResponseType(typeof(API.Transfer), 200)]
         public IActionResult GetUploads([FromRoute, Required] string username, [FromRoute, Required] string id)
         {
             if (Program.IsRelayAgent)

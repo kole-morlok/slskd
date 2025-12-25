@@ -103,9 +103,17 @@ namespace slskd.Core.API
             return Ok(configurationRoot.GetDebugView());
         }
 
+        /// <summary>
+        ///     Gets the location of the YAML configuration file.
+        /// </summary>
+        /// <returns></returns>
+        /// <response code="200">The request completed successfully.</response>
+        /// <response code="403">Remote configuration is disabled.</response>
         [HttpGet]
         [Authorize(Policy = AuthPolicy.JwtOnly, Roles = AuthRole.AdministratorOnly)]
         [Route("yaml/location")]
+        [ProducesResponseType(typeof(string), 200)]
+        [ProducesResponseType(403)]
         public IActionResult GetYamlFileLocation()
         {
             if (!OptionsSnapshot.Value.RemoteConfiguration)
@@ -116,9 +124,17 @@ namespace slskd.Core.API
             return Ok(Program.ConfigurationFile);
         }
 
+        /// <summary>
+        ///     Gets the content of the YAML configuration file.
+        /// </summary>
+        /// <returns></returns>
+        /// <response code="200">The request completed successfully.</response>
+        /// <response code="403">Remote configuration is disabled.</response>
         [HttpGet]
         [Authorize(Policy = AuthPolicy.JwtOnly, Roles = AuthRole.AdministratorOnly)]
         [Route("yaml")]
+        [ProducesResponseType(typeof(string), 200)]
+        [ProducesResponseType(403)]
         public IActionResult GetYamlFile()
         {
             if (!OptionsSnapshot.Value.RemoteConfiguration)
@@ -130,9 +146,20 @@ namespace slskd.Core.API
             return Ok(yaml);
         }
 
+        /// <summary>
+        ///     Updates the YAML configuration file.
+        /// </summary>
+        /// <param name="yaml">The new YAML configuration content.</param>
+        /// <returns></returns>
+        /// <response code="200">The request completed successfully.</response>
+        /// <response code="400">The YAML is invalid.</response>
+        /// <response code="403">Remote configuration is disabled.</response>
         [HttpPost]
         [Authorize(Policy = AuthPolicy.JwtOnly, Roles = AuthRole.AdministratorOnly)]
         [Route("yaml")]
+        [ProducesResponseType(200)]
+        [ProducesResponseType(typeof(string), 400)]
+        [ProducesResponseType(403)]
         public IActionResult UpdateYamlFile([FromBody] string yaml)
         {
             if (!OptionsSnapshot.Value.RemoteConfiguration)
@@ -164,9 +191,18 @@ namespace slskd.Core.API
             }
         }
 
+        /// <summary>
+        ///     Validates the provided YAML configuration.
+        /// </summary>
+        /// <param name="yaml">The YAML configuration to validate.</param>
+        /// <returns></returns>
+        /// <response code="200">The YAML is valid or returns validation error.</response>
+        /// <response code="403">Remote configuration is disabled.</response>
         [HttpPost]
         [Authorize(Policy = AuthPolicy.Any)]
         [Route("yaml/validate")]
+        [ProducesResponseType(typeof(string), 200)]
+        [ProducesResponseType(403)]
         public IActionResult ValidateYamlFile([FromBody] string yaml)
         {
             if (!OptionsSnapshot.Value.RemoteConfiguration)
